@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle de Movimentação de Produtos — Eventos MNL</title>
+<style>
+  :root{
+    --ink:#12293A;
+    --navy:#1F4E78;
+    --navy-dark:#123449;
+    --paper:#F3F5F6;
+    --card:#FFFFFF;
+    --line:#DCE3E7;
+    --ok:#1F7A54;
+    --ok-bg:#E4F3EC;
+    --warn:#B4381F;
+    --warn-bg:#FBEAE6;
+    --amber:#B9740A;
+    --amber-bg:#FBF1DF;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:var(--sans); background:var(--paper); color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  header.top{
+    background:linear-gradient(135deg,var(--navy) 0%, var(--navy-dark) 100%);
+    color:#fff; padding:22px 20px 26px; position:relative; overflow:hidden;
+  }
+  header.top::after{
+    content:""; position:absolute; right:-60px; top:-60px; width:220px; height:220px;
+    border-radius:50%; background:rgba(255,255,255,0.06);
+  }
+  header.top h1{
+    margin:0; font-size:20px; letter-spacing:.2px; font-weight:700; position:relative;
+  }
+  header.top p.sub{
+    margin:4px 0 0; font-size:12.5px; color:#CBD9E3; position:relative;
+  }
+  .stat-row{
+    display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; position:relative;
+  }
+  .stat{
+    background:rgba(255,255,255,0.09); border:1px solid rgba(255,255,255,0.14);
+    border-radius:10px; padding:8px 14px; min-width:108px;
+  }
+  .stat .num{font-family:var(--mono); font-size:19px; font-weight:700; line-height:1.1;}
+  .stat .lab{font-size:10.5px; color:#CBD9E3; text-transform:uppercase; letter-spacing:.5px; margin-top:2px;}
+
+  main{
+    max-width:1180px; margin:0 auto; padding:20px 16px 60px;
+    display:grid; grid-template-columns: 400px 1fr; gap:20px; align-items:start;
+  }
+  @media (max-width: 920px){
+    main{grid-template-columns: 1fr;}
+  }
+
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:18px 18px 20px; box-shadow:0 1px 2px rgba(18,41,58,0.04);
+  }
+  .card h2{
+    font-size:14px; margin:0 0 14px; color:var(--navy-dark);
+    text-transform:uppercase; letter-spacing:.6px; font-weight:700;
+    display:flex; align-items:center; gap:8px;
+  }
+  .card h2 .badge-count{
+    font-family:var(--mono); background:var(--paper); border:1px solid var(--line);
+    border-radius:20px; padding:1px 9px; font-size:11px; color:var(--navy); font-weight:600;
+    text-transform:none; letter-spacing:0;
+  }
+
+  form .field{margin-bottom:13px;}
+  form .field.tight{margin-bottom:8px;}
+  label{
+    display:block; font-size:11.5px; font-weight:700; color:#3C5568;
+    text-transform:uppercase; letter-spacing:.4px; margin-bottom:5px;
+  }
+  input[type=text], input[type=number], input[type=search], select, textarea{
+    width:100%; font-family:var(--sans); font-size:14.5px; padding:9px 11px;
+    border:1.5px solid var(--line); border-radius:8px; background:#fff; color:var(--ink);
+    transition:border-color .12s;
+  }
+  input:focus, select:focus, textarea:focus{
+    outline:none; border-color:var(--navy);
+  }
+  input:disabled{background:#F0F2F3; color:#8CA0AC;}
+  textarea{resize:vertical; min-height:52px;}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;}
+  .row-cep{display:grid; grid-template-columns:130px 70px 1fr; gap:10px;}
+  .row-log{display:grid; grid-template-columns:1fr 110px; gap:10px;}
+
+  .autofill-preview{
+    background:var(--paper); border:1px dashed var(--line); border-radius:8px;
+    padding:8px 10px; font-size:12.5px; color:#3C5568; margin-top:6px; min-height:18px;
+  }
+  .autofill-preview strong{color:var(--ink);}
+  .autofill-preview.empty{color:#93A4AE; font-style:italic;}
+  .cep-status{font-size:11.5px; margin-top:4px; min-height:14px;}
+  .cep-status.loading{color:var(--amber);}
+  .cep-status.ok{color:var(--ok);}
+  .cep-status.error{color:var(--warn);}
+
+  .checkbox-row{
+    display:flex; align-items:center; gap:8px; background:var(--paper);
+    border:1px solid var(--line); border-radius:8px; padding:9px 11px; margin-bottom:12px;
+  }
+  .checkbox-row input{width:16px; height:16px; margin:0;}
+  .checkbox-row label{margin:0; text-transform:none; font-weight:600; font-size:13px; color:var(--ink); letter-spacing:0;}
+
+  fieldset{border:none; padding:0; margin:0 0 14px; border-top:1px solid var(--line); padding-top:12px;}
+  fieldset legend{
+    font-size:10.5px; font-weight:700; color:#7C8E98; text-transform:uppercase; letter-spacing:.5px;
+    padding:0 4px 0 0; margin-left:-4px;
+  }
+
+  .clock-preview{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:var(--paper); border:1px solid var(--line); border-radius:8px;
+    padding:9px 12px; font-size:12.5px; color:#3C5568; margin-bottom:14px;
+  }
+  .clock-preview .time{font-family:var(--mono); font-weight:700; color:var(--navy-dark); font-size:13.5px;}
+
+  button.primary{
+    width:100%; background:var(--navy); color:#fff; border:none; border-radius:9px;
+    padding:12px 16px; font-size:14.5px; font-weight:700; cursor:pointer;
+    transition:background .12s; letter-spacing:.2px;
+  }
+  button.primary:hover{background:var(--navy-dark);}
+  button.ghost{
+    background:transparent; border:1.5px solid var(--line); color:var(--navy-dark);
+    border-radius:9px; padding:8px 14px; font-size:12.5px; font-weight:700; cursor:pointer;
+  }
+  button.ghost:hover{border-color:var(--navy);}
+
+  .msg{font-size:12.5px; margin-top:8px; padding:8px 10px; border-radius:7px; display:none;}
+  .msg.show{display:block;}
+  .msg.error{background:var(--warn-bg); color:var(--warn);}
+  .msg.success{background:var(--ok-bg); color:var(--ok);}
+
+  .list-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; gap:10px; flex-wrap:wrap;}
+  .list-head h2{margin:0;}
+  .empty-state{
+    text-align:center; padding:50px 20px; color:#8CA0AC;
+  }
+  .empty-state .big{font-size:34px; margin-bottom:8px;}
+  .empty-state p{margin:4px 0; font-size:13px;}
+
+  .ticket{
+    border:1px solid var(--line); border-left:4px solid var(--navy); border-radius:10px;
+    background:#fff; padding:12px 14px; margin-bottom:10px; position:relative;
+  }
+  .ticket.pend{border-left-color:var(--warn);}
+  .ticket .t-top{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:8px;}
+  .ticket .t-id{font-family:var(--mono); font-weight:700; color:var(--navy-dark); font-size:13px;}
+  .ticket .t-time{font-family:var(--mono); font-size:11px; color:#7C8E98; margin-top:1px;}
+  .pill{
+    font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:20px; white-space:nowrap;
+    text-transform:uppercase; letter-spacing:.3px;
+  }
+  .pill.ok{background:var(--ok-bg); color:var(--ok);}
+  .pill.pend{background:var(--warn-bg); color:var(--warn);}
+  .t-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:8px 16px;
+    font-size:12.5px; margin-bottom:6px;
+  }
+  .t-grid .k{color:#7C8E98; font-size:10.5px; text-transform:uppercase; letter-spacing:.3px; margin-bottom:1px;}
+  .t-grid .v{color:var(--ink); font-weight:600;}
+  .t-obs{font-size:12px; color:#3C5568; background:var(--paper); border-radius:7px; padding:6px 9px; margin-top:6px;}
+  .t-actions{position:absolute; top:10px; right:12px;}
+  .t-del{background:none; border:none; color:#B0BEC7; cursor:pointer; font-size:13px; padding:2px 5px;}
+  .t-del:hover{color:var(--warn);}
+
+  datalist{ }
+  ::placeholder{color:#A8B7C0;}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1>Controle de Movimentação de Produtos em Eventos</h1>
+  <p class="sub">MNL Distribuidora — retiradas sem venda (brindes, degustação, uso interno, mostruário, danos e perdas)</p>
+  <div class="stat-row">
+    <div class="stat"><div class="num" id="statTotal">0</div><div class="lab">Registros</div></div>
+    <div class="stat"><div class="num" id="statQtd">0</div><div class="lab">Itens retirados</div></div>
+    <div class="stat"><div class="num" id="statPend">0</div><div class="lab">Pendências</div></div>
+  </div>
+</header>
+
+<main>
+  <!-- ==================== FORM ==================== -->
+  <section class="card">
+    <h2>Novo Registro</h2>
+    <form id="regForm" autocomplete="off">
+
+      <div class="clock-preview">
+        <span>Será registrado em</span>
+        <span class="time" id="liveClock">--/--/---- --:--</span>
+      </div>
+
+      <fieldset>
+        <legend>Produto</legend>
+        <div class="field">
+          <label for="skuInput">SKU</label>
+          <input type="text" id="skuInput" list="skuList" placeholder="Digite o SKU ou parte do nome..." required>
+          <datalist id="skuList"></datalist>
+        </div>
+        <div class="autofill-preview empty" id="prodPreview">Selecione um SKU válido da lista</div>
+        <div class="field tight" style="margin-top:10px;">
+          <label for="qtdInput">Quantidade</label>
+          <input type="number" id="qtdInput" min="1" step="1" placeholder="0" required>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Destinatário</legend>
+        <div class="checkbox-row">
+          <input type="checkbox" id="anonCheck">
+          <label for="anonCheck">Consumidor não identificado (ex.: brinde ao público)</label>
+        </div>
+        <div class="field">
+          <label for="destNome">Nome / Razão Social</label>
+          <input type="text" id="destNome" placeholder="Nome completo ou razão social">
+        </div>
+        <div class="field">
+          <label for="destDoc">CPF / CNPJ</label>
+          <input type="text" id="destDoc" placeholder="000.000.000-00">
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Endereço</legend>
+        <div class="row-cep">
+          <div>
+            <label for="cepInput">CEP</label>
+            <input type="text" id="cepInput" placeholder="00000-000" inputmode="numeric" maxlength="9">
+          </div>
+          <div>
+            <label for="ufInput">UF</label>
+            <input type="text" id="ufInput" maxlength="2" placeholder="--">
+          </div>
+          <div>
+            <label for="cidadeInput">Cidade</label>
+            <input type="text" id="cidadeInput" placeholder="Preenchido pelo CEP" disabled>
+          </div>
+        </div>
+        <div class="cep-status" id="cepStatus"></div>
+        <div class="row-log" style="margin-top:10px;">
+          <div>
+            <label for="logradouroInput">Logradouro</label>
+            <input type="text" id="logradouroInput" placeholder="Preenchido pelo CEP" disabled>
+          </div>
+          <div>
+            <label for="numeroInput">Número</label>
+            <input type="text" id="numeroInput" placeholder="Nº">
+          </div>
+        </div>
+        <div class="field" style="margin-top:10px;">
+          <label for="bairroInput">Bairro</label>
+          <input type="text" id="bairroInput" placeholder="Preenchido pelo CEP" disabled>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Operação</legend>
+        <div class="field">
+          <label for="tipoInput">Tipo de Operação</label>
+          <select id="tipoInput" required>
+            <option value="">Selecione...</option>
+            <option>🎁 Brinde</option>
+            <option>🍽️ Degustação</option>
+            <option>👨‍💼 Uso Interno</option>
+            <option>🔄 Reposição de Mostruário</option>
+            <option>⚠️ Produto Danificado</option>
+            <option>📉 Perda</option>
+            <option>Outro</option>
+          </select>
+        </div>
+        <div class="field tight">
+          <label for="obsInput">Observações</label>
+          <textarea id="obsInput" placeholder="Detalhes adicionais (opcional)"></textarea>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Fiscal</legend>
+        <div class="field tight">
+          <label for="nfeInput">NF-e emitida?</label>
+          <select id="nfeInput" required>
+            <option value="">Selecione...</option>
+            <option>Sim</option>
+            <option>Não</option>
+          </select>
+        </div>
+      </fieldset>
+
+      <button type="submit" class="primary">Adicionar Registro</button>
+      <div class="msg error" id="formError"></div>
+    </form>
+  </section>
+
+  <!-- ==================== LIST ==================== -->
+  <section class="card">
+    <div class="list-head">
+      <h2>Registros do Evento <span class="badge-count" id="listCount">0</span></h2>
+      <button class="ghost" id="exportBtn">Exportar CSV</button>
+    </div>
+    <div id="listContainer">
+      <div class="empty-state">
+        <div class="big">🗒️</div>
+        <p><strong>Nenhum registro ainda.</strong></p>
+        <p>Preencha o formulário ao lado para lançar a primeira retirada do evento.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ===================== DADOS DE PRODUTOS ===================== */
+const PRODUTOS = [{"sku": "0000082417", "desc": "BALANCA DE BIOIMPEDÂNCIA BODYSCAN PRO", "volt": ""}, {"sku": "0000082419", "desc": "BALANCA DIGITAL SMART BIOIMPEDANCIA", "volt": ""}, {"sku": "0000082421", "desc": "BALANCA DE BIOIMPEDANCIA BODYSCAN VISION", "volt": ""}, {"sku": "0000082423", "desc": "BALANCA DE BIOIMPEDANCIA BODYSCAN VISION", "volt": ""}, {"sku": "0000082425", "desc": "BOLSA TERMICA GEL SLIPPER", "volt": ""}, {"sku": "0000082427", "desc": "FILTRO HEPA PARA DESUMIDIFICADOR E PURIFICADOR DE AR Q9", "volt": ""}, {"sku": "0000082429", "desc": "DESUMIDIFICADOR BLUE AIR", "volt": ""}, {"sku": "0000082431", "desc": "GEL DE REPOSIÇÃO PARA APARELHO ELETROESTIMULADOR FISIO TENS E FISIO TENS CONTROL", "volt": ""}, {"sku": "0000082433", "desc": "MASSAGEADOR DE PESCOÇO WIRELESS 6D BLUE", "volt": ""}, {"sku": "0000082435", "desc": "ORBIT MASSAGE", "volt": ""}, {"sku": "0000082437", "desc": "ESTIMULADOR DE PULSO ELETRÔNICO FISIO TENS COSTAS", "volt": ""}, {"sku": "0000082439", "desc": "GEL DE REPOSIÇÃO DE ELETROESTIMULADOR MUSCULAR MULTIUSO", "volt": ""}, {"sku": "0000082441", "desc": "ELETROESTIMULADOR MUSCULAR ABDOMEN POWER RELAX", "volt": ""}, {"sku": "0000082443", "desc": "ELETROESTIMULADOR MUSCULAR BRAÇOS POWER RELAX", "volt": ""}, {"sku": "0000082445", "desc": "GEL DE REPOSIÇÃO DE ELETROESTIMULADOR MUSCULAR BRAÇOS POWER RELAX", "volt": ""}, {"sku": "0000082447", "desc": "ELETROESTIMULADOR MUSCULAR COSTAS POWER RELAX", "volt": ""}, {"sku": "0000082449", "desc": "ELETROESTIMULADOR MUSCULAR GLUTEOS POWER RELAX", "volt": ""}, {"sku": "0000082451", "desc": "ELETROESTIMULADOR MUSCULAR PERNAS POWER RELAX", "volt": ""}, {"sku": "0000082503", "desc": "COMPLEMENTAR", "volt": ""}, {"sku": "0000082817", "desc": "RELAX NIGHT", "volt": ""}, {"sku": "02093", "desc": "BOLSA DE TRANSPORTE F10 PRO", "volt": ""}, {"sku": "AE2600001", "desc": "REPELENTE DE INSETOS AEROSSOL 150ML MH REPELLERE", "volt": ""}, {"sku": "AE2600004", "desc": "ESPUMA DE BARBEAR SPRAY MOOD 150ML MY HEALTH", "volt": ""}, {"sku": "AE2600016", "desc": "MOUSSE EFERVESCENTE SPRAY ALIVI 150ML MY HEALTH", "volt": ""}, {"sku": "AE2600029", "desc": "GELO SPRAY ALIVI", "volt": ""}, {"sku": "AE2600047", "desc": "ÁLCOOL GEL ANTISSÉPTICO  SPRAY - 150ML 120G", "volt": ""}, {"sku": "LU-0001", "desc": "POLTRONA DO PAPAI MASSAGEADORA PRETA - RELAXMEDIC", "volt": ""}, {"sku": "LU-0002", "desc": "POLTRONA DO PAPAI MASSAGEADORA MARROM - RELAXMEDIC", "volt": ""}, {"sku": "LU-0003", "desc": "ESCOVA SECADORA E ALISADORA COM MODELAGEM ULTRA DRY PROFESSIONAL 110V", "volt": "110V"}, {"sku": "LU-0004", "desc": "ESCOVA SECADORA E ALISADORA COM MODELAGEM ULTRA DRY PROFESSIONAL 220V", "volt": "220V"}, {"sku": "LU-0005", "desc": "MATA MOSQUITO KILLER 127V", "volt": "127V"}, {"sku": "LU-0006", "desc": "MATA MOSQUITO KILLER 220V", "volt": "220V"}, {"sku": "LU-0007", "desc": "ANTI INSETO - BUG TRAP 110V - RELAXMEDIC", "volt": "110V"}, {"sku": "LU-0008", "desc": "ANTI INSETO - BUG TRAP 220V - RELAXMEDIC", "volt": "220V"}, {"sku": "LU-0009", "desc": "MASSAGEADOR ELÉTRICO ORBITAL RELAXMEDIC 2600 ROTAÇÕES - 110V", "volt": "110V"}, {"sku": "LU-0010", "desc": "MASSAGEADOR ELÉTRICO ORBITAL RELAXMEDIC 2600 ROTAÇÕES - 220V", "volt": "220V"}, {"sku": "LU-0011", "desc": "MASSAGEADOR ELETRICO CORPORAL HAMMER SUPER MASSAGE - RELAXMEDIC CINZA 127V", "volt": "127V"}, {"sku": "LU-0012", "desc": "MASSAGEADOR ELETRICO CORPORAL HAMMER SUPER MASSAGE - RELAXMEDIC CINZA 220V", "volt": "220V"}, {"sku": "LU-0013", "desc": "MASSAGEADOR ELETRICO CORPORAL HAMMER SUPER MASSAGE - RELAXMEDIC  BRANCO 127V", "volt": "127V"}, {"sku": "LU-0014", "desc": "MASSAGEADOR ELETRICO CORPORAL HAMMER SUPER MASSAGE - RELAXMEDIC  BRANCO 220V", "volt": "220V"}, {"sku": "LU-0015", "desc": "DESUMIDIFICADOR DE AR ELÉTRICO COMPRESSOR WIFI RELAXMEDIC 127V", "volt": "127V"}, {"sku": "LU-0016", "desc": "DESUMIDIFICADOR DE AR ELÉTRICO COMPRESSOR WIFI RELAXMEDIC 220V", "volt": "220V"}, {"sku": "LU-0017", "desc": "MASSAGEADOR ELETRICO BODY THERAPY C/ AQUECIMENTO RELAXMEDIC 127V", "volt": "127V"}, {"sku": "LU-0018", "desc": "MASSAGEADOR ELETRICO BODY THERAPY C/ AQUECIMENTO RELAXMEDIC 220V", "volt": "220V"}, {"sku": "LU-0019", "desc": "MASSAGEADOR ELETRICO PISTOLA MINI DEEP THERAPY RELAXMEDIC - CINZA", "volt": ""}, {"sku": "LU-0020", "desc": "MASSAGEADOR ELETRICO PISTOLA MINI DEEP THERAPY RELAXMEDIC - AZUL", "volt": ""}, {"sku": "LU-0021", "desc": "Balança de Bioimpêdancia BodyScan Pro BRANCA", "volt": ""}, {"sku": "LU-0022", "desc": "Balança de Bioimpêdancia BodyScan Pro PRETA", "volt": ""}, {"sku": "LU-0023", "desc": "DESUMIDIFICADOR DE AR DRYSEC PRETO", "volt": ""}, {"sku": "MC-301", "desc": "POLTRONA 5 TIPOS MASSAGEM GRAVIDADE ZERO ORTOBOM RELAXMEDIC.", "volt": ""}, {"sku": "MC-803", "desc": "Poltrona Massagem Shiatsu Gravidade Zero Ortobom Relaxmedic", "volt": ""}, {"sku": "MN-CA0001", "desc": "Cama Articulada Solteiro Motorizada c/ Controle Dr Coluna", "volt": ""}, {"sku": "MN-CA0002", "desc": "CAMA ARTICULADA CASAL MOTORIZADA C/ CONTROLE DR COLUNA", "volt": ""}, {"sku": "MN-MA0001", "desc": "Máscara protetora facial acrílica Face Shield", "volt": ""}, {"sku": "MN-MC0950", "desc": "Máscara de Proteção N95 / PFF2, camada tripla descartável", "volt": ""}, {"sku": "MN-MT0001", "desc": "Máscara de Proteção TNT camada tripla descartável - 50 unid", "volt": ""}, {"sku": "R0001", "desc": "Massageador Eletrico Corporal Hammer Super Massage - Relaxmedic", "volt": ""}, {"sku": "RB-AF0652A", "desc": "APARADOR DE PELOS FEMININOS 6 EM 1", "volt": ""}, {"sku": "RB-AF8686A", "desc": "Aparador De Pelos Elétrico Feminino Lady Trimmer - Sem Dor!", "volt": ""}, {"sku": "RB-AM0249A", "desc": "Barbeador Elétrico Á Prova D´água - Relax Multi Groom", "volt": ""}, {"sku": "RB-AM0954A", "desc": "SPORT BARBER", "volt": ""}, {"sku": "RB-AM6800A", "desc": "Barbeador Elétrico À Prova D'Água Multiuso 5 em 1 Relaxmedic", "volt": ""}, {"sku": "RB-CC0118", "desc": "MODELADOR TITANIUM CONTROL", "volt": ""}, {"sku": "RB-CP4135", "desc": "CONJUNTO PINCÉIS FASHION BEAUTY CARE", "volt": ""}, {"sku": "RB-CP4149", "desc": "CONJUNTO DE PINCEIS COLOR BEAUTY CARE", "volt": ""}, {"sku": "RB-CU3122", "desc": "CORTADOR DE UNHA BEAUTY CARE", "volt": ""}, {"sku": "RB-EC0261A", "desc": "Wonder Brush", "volt": ""}, {"sku": "RB-EC0285A AH", "desc": "Escova Ultra Dry Secadora Alisa Potente - Relaxbeauty", "volt": ""}, {"sku": "RB-EC0497A", "desc": "Mini Wonder Brush", "volt": ""}, {"sku": "RB-EC9100A", "desc": "ESCOVA SECADORA 3 EM 1 ULTRA DRY PROFESSIONAL", "volt": ""}, {"sku": "RB-EL0508", "desc": "POCKET MIRROR", "volt": ""}, {"sku": "RB-EL1275", "desc": "POCKET MIRROR USB", "volt": ""}, {"sku": "RB-EL1277", "desc": "COLOR MIRROR", "volt": ""}, {"sku": "RB-HM1178", "desc": "ESCOVA THERAPY HAIR", "volt": ""}, {"sku": "RB-KM3104", "desc": "CONJUNTO BASIC BEAUTY CARE", "volt": ""}, {"sku": "RB-KM5500", "desc": "CONJUNTO MANICURE BEAUTY CARE", "volt": ""}, {"sku": "RB-LX9237", "desc": "LIXAS BEAUTY CARE", "volt": ""}, {"sku": "RB-MC0828", "desc": "MINI CURVE", "volt": ""}, {"sku": "RB-MC1016", "desc": "INTENSE EYES", "volt": ""}, {"sku": "RB-MC1117", "desc": "MAX CURVE", "volt": ""}, {"sku": "RB-MC1119", "desc": "APLIQUE MASCARA", "volt": ""}, {"sku": "RB-MF1285", "desc": "Aplicador de Base Perfect Make Up", "volt": ""}, {"sku": "RB-MF1717A", "desc": "Escova de Limpeza Facial - com 3 acessórios - Relabeauty", "volt": ""}, {"sku": "RB-MF8289A", "desc": "Escova de Limpeza Facial à Prova D'água Clean Pro", "volt": ""}, {"sku": "RB-MF8485A", "desc": "Acessório de Limpeza Facial Massageador Alfa", "volt": ""}, {"sku": "RB-PC8816A", "desc": "Prancha Alisadora Para Cabelos Com Infravermelho Infrared", "volt": ""}, {"sku": "RB-PC8816A AH", "desc": "PRANCHA INFRARED CERAMIC", "volt": ""}, {"sku": "RB-PC890A", "desc": "Chapinha Pretty Slim Prancha Aquecimento 200°c - Relaxbeauty", "volt": ""}, {"sku": "RB-PE835C", "desc": "MASSAGEADOR E ESFOLIADOR DE PÉS FEET CARE", "volt": ""}, {"sku": "RB-PI4106", "desc": "PINÇA FLOWER BEAUTY CARE", "volt": ""}, {"sku": "RB-PI5800", "desc": "PINÇA DEPILATÓRIA PARA DESIGN DE SOBRANCELHAS PRO BEAUTY CARE", "volt": ""}, {"sku": "RB-SC0061A", "desc": "Secador Power Travel Ion", "volt": ""}, {"sku": "RB-SC563BA BIV", "desc": "Escova 360 Beauty", "volt": ""}, {"sku": "RB-TD2018", "desc": "TOALHA DEMAQUILANTE CLEAN MAKE UP", "volt": ""}, {"sku": "RB-TS4110", "desc": "TESOURA BEAUTY CARE", "volt": ""}, {"sku": "RM-AC2808", "desc": "Lombar Soft", "volt": ""}, {"sku": "RM-AI1414A", "desc": "Mata Mosquito Killer", "volt": ""}, {"sku": "RM-AI1515A", "desc": "Anti Inseto - Bug Trap - Relaxmedic", "volt": ""}, {"sku": "RM-AL2807", "desc": "Apoio Anatômico para Costas ou Cabeça Air Cushion", "volt": ""}, {"sku": "RM-AM2206A", "desc": "ASSENTO ULTRA MASSAGE", "volt": ""}, {"sku": "RM-AM2602", "desc": "Assento Massageador", "volt": ""}, {"sku": "RM-AO0235A", "desc": "Almofada Ortopédica Lombar Relaxmedic | Linha Dr Coluna", "volt": ""}, {"sku": "RM-AO1344A", "desc": "Almofada Travesseiro Pescoco Viagem NASA Gel Relax Dr Coluna", "volt": ""}, {"sku": "RM-AO1378A", "desc": "TRAVESSEIRO ORTOPÉDICO BEERELAX", "volt": ""}, {"sku": "RM-AO2703A", "desc": "Assento Ortopédico Dr Coluna", "volt": ""}, {"sku": "RM-AO3772A", "desc": "Almofada Apoio de Pernas Viscoelástico Relaxmedic Dr Coluna", "volt": ""}, {"sku": "RM-AO3861A", "desc": "Almofada Ortopédica Costas Relaxmedic | Linha Dr Coluna", "volt": ""}, {"sku": "RM-AO4030A", "desc": "Travesseiro Nasa Bambu Cervical Ortopédico Antialérgico Dr Coluna", "volt": ""}, {"sku": "RM-AO6590A", "desc": "Travesseiro Rampa Anti Refluxo Dobrável Relaxmedic Dr Coluna.", "volt": ""}, {"sku": "RM-AO8533A", "desc": "Travesseiro Ortopedico Viscoelástico NASA Gel Dr Coluna", "volt": ""}, {"sku": "RM-AO9445A", "desc": "Almofada Cóccix Gel Relaxmedic | Linha Dr Coluna", "volt": ""}, {"sku": "RM-AP2806", "desc": "Air Neck Pillow", "volt": ""}, {"sku": "RM-AS2309A", "desc": "ASSENTO SHIATSU ENERGY 3D", "volt": ""}, {"sku": "RM-AS2950A", "desc": "ASSENTO SHIATSU DELUXE", "volt": ""}, {"sku": "RM-AS3232A", "desc": "Assento Shiatsu C/aquecimento R18", "volt": ""}, {"sku": "RM-AS7177A", "desc": "Assento Shiatsu C/ Aquecimento Back Shiatsu Seat.", "volt": ""}, {"sku": "RM-AS8187A", "desc": "Assento Massageador Neck & Back Shiatsu Seat Plus", "volt": ""}, {"sku": "RM-BD0015A", "desc": "Balança de Bioimpêdancia BodyScan Pro", "volt": ""}, {"sku": "RM-BD0091A", "desc": "BALANÇA DIGITAL BIOIMPEDÂNCIA INTELLIGENCE PLUS", "volt": ""}, {"sku": "RM-BD0206A", "desc": "BALANÇA DIGITAL ÔNIX", "volt": ""}, {"sku": "RM-BD0263A", "desc": "BALANÇA DIGITAL CORPORAL BIOIMPEDANCIA SMART APP RELAXMEDIC", "volt": ""}, {"sku": "RM-BD0263A CX", "desc": "EMBALAGEM BALANCA DIGITAL SMART BIOIMPEDANCIA", "volt": ""}, {"sku": "RM-BD0400A", "desc": "BALANÇA DE COZINHA X4", "volt": ""}, {"sku": "RM-BD0628A", "desc": "BALANÇA DIGITAL INFIT", "volt": ""}, {"sku": "RM-BD0914A", "desc": "Balança Digital Bioimpedância Intelligence App - Relaxmedic", "volt": ""}, {"sku": "RM-BD0980A", "desc": "BALANÇA DE BIOIMPEDÂNCIA PRECISIONFIT 980 PRO BT", "volt": ""}, {"sku": "RM-BD116A", "desc": "BALANCA DIGITAL YOUR WAY", "volt": ""}, {"sku": "RM-BD1904A", "desc": "Balança de Bioimpedância Digital App - Relaxmedic", "volt": ""}, {"sku": "RM-BD1904A2", "desc": "Balança de Bioimpedância Corporal Digital App - Relaxmedic", "volt": ""}, {"sku": "RM-BD1911A", "desc": "BALANÇA DIGITAL MAX 250", "volt": ""}, {"sku": "RM-BD1916A", "desc": "BALANÇA DIGITAL DE BIOIMPEDÂNCIA BIOFIT", "volt": ""}, {"sku": "RM-BD2020A", "desc": "Balança Digital Personal Fitness", "volt": ""}, {"sku": "RM-BD2202A", "desc": "BALANÇA DIGITAL DE BIOIMPEDÂNCIA BIOLIFE", "volt": ""}, {"sku": "RM-BD2305A", "desc": "BALANÇA BODYSCAN VISION", "volt": ""}, {"sku": "RM-BD2317A", "desc": "BALANÇA DIGITAL GO BALANCE RELAXMEDIC", "volt": ""}, {"sku": "RM-BD2403A", "desc": "BALANÇA DIGITAL DE BIOIMPEDÂNCIA SMART NEO", "volt": ""}, {"sku": "RM-BD2408A", "desc": "BALANÇA DE BIOIMPEDÂNCIA SMART VISIOX", "volt": ""}, {"sku": "RM-BD2419A", "desc": "BALANCA DIGITAL BIOIMPEDANCIA INTELLIGENCE PROSCAN VOICE", "volt": ""}, {"sku": "RM-BD2428A", "desc": "BALANÇA DIGITAL DE  BIOIMPEDANCIA INTELLIGENCE WI-FI", "volt": ""}, {"sku": "RM-BD2504A", "desc": "BALANÇA DE BIOIMPEDÂNCIA NIVORA", "volt": ""}, {"sku": "RM-BD2505A", "desc": "BALANÇA DE BIOIMPEDÂNCIA INTELLIGENCE BIO-X WI-FI", "volt": ""}, {"sku": "RM-BD2910A", "desc": "Balança de Bioimpedância Digital Cardio App Relaxmedic", "volt": ""}, {"sku": "RM-BD2910A2", "desc": "Balança de Bioimpedância Digital App Cardio - Relaxmedic", "volt": ""}, {"sku": "RM-BD2910A2 CX", "desc": "EMBALAGEM BALANCA DIGITAL CARDIO APP NEW", "volt": ""}, {"sku": "RM-BD5142A", "desc": "BALANÇA DIGITAL CORPORAL BIOIMPEDÂNCIA FISIO SPORT RELAXMEDIC", "volt": ""}, {"sku": "RM-BD5142A CX", "desc": "EMBALAGEM DA BALANCA DIGITAL BIOIMPEDANCIA FISIO SPORT", "volt": ""}, {"sku": "RM-BD6000A", "desc": "BALANÇA DE COZINHA X6", "volt": ""}, {"sku": "RM-BD6122A", "desc": "Balança Corporal Digital Relaxmedic Body Fit, Até 180 Kg", "volt": ""}, {"sku": "RM-BD9090A", "desc": "Balança Digital Com Bluetooth e Bioimpedância Elegance App", "volt": ""}, {"sku": "RM-BD9090A2", "desc": "Balança Digital Corporal Com Bluetooth e Bioimpedância Elegance App", "volt": ""}, {"sku": "RM-BR1501A", "desc": "MIXER PRO MIX", "volt": ""}, {"sku": "RM-BT0013A", "desc": "BOLSA TÉRMICA FRIA ADESIVA REUTILIZÁVEL RELAXMEDIC", "volt": ""}, {"sku": "RM-BT0019A", "desc": "BOLSA TÉRMICA QUENTE FRIO GEL SOFT RELAXMEDIC", "volt": ""}, {"sku": "RM-BT0120A", "desc": "BOLSA TÉRMICA SLIPPER QUENTE E FRIO PARA OS PÉS PANTUFAS RELAXMEDIC", "volt": ""}, {"sku": "RM-BT0200A", "desc": "BOLSA TÉRMICA GEL BLACK COSTAS", "volt": ""}, {"sku": "RM-BT0210A", "desc": "BOLSA TÉRMICA GEL BLACK OMBRO", "volt": ""}, {"sku": "RM-BT0220A", "desc": "BOLSA TÉRMICA GEL BLACK MULFUNCIONAL (P)", "volt": ""}, {"sku": "RM-BT0221A", "desc": "BOLSA TÉRMICA GEL BLACK MULFUNCIONAL (G)", "volt": ""}, {"sku": "RM-BT0310A", "desc": "BOLSA TÉRMICA GEL FULL JOELHO", "volt": ""}, {"sku": "RM-BT0311A", "desc": "BOLSA TÉRMICA GEL ADAPT PRO", "volt": ""}, {"sku": "RM-BT0410A", "desc": "BOLSA TÉRMICA GEL MAT", "volt": ""}, {"sku": "RM-BT0500A", "desc": "BOLSA TÉRMICA RELAX CLICK COLD", "volt": ""}, {"sku": "RM-BT0700A", "desc": "BOLSA TÉRMICA RELAX CLICK HOT", "volt": ""}, {"sku": "RM-BT1530A", "desc": "BALDE DE GELO DE COMPRESSÃO ICE THERAPY BO", "volt": ""}, {"sku": "RM-BT3001A", "desc": "Bolsa  Relax Thermo Adapt", "volt": ""}, {"sku": "RM-BT3004A", "desc": "Bolsa Relax Thermo Multiuso", "volt": ""}, {"sku": "RM-CM0025A", "desc": "CADEIRA DE MASSAGEM SHIATSU FLEX", "volt": ""}, {"sku": "RM-CM6011A", "desc": "CADEIRA DE ESCRITÓRIO MASSAGEADORA RELAXFLEX", "volt": ""}, {"sku": "RM-CM7166A", "desc": "Poltrona Massageadora Shiatsu Lounge com Pés de Madeira", "volt": ""}, {"sku": "RM-CO0003C", "desc": "Gel redutor de medidas e celulite Get Slim", "volt": ""}, {"sku": "RM-CO0003G", "desc": "Creme Gel de Massagem relaxante Intense Relax", "volt": ""}, {"sku": "RM-CO1022", "desc": "GEL MASSAGEADOR ARNICA SPORT FISIO", "volt": ""}, {"sku": "RM-CO1711", "desc": "MOUSSE SPRAY EFERVESCENTE ARNICA DOR SPORT FISIO RELAXMEDIC", "volt": ""}, {"sku": "RM-DA0009A", "desc": "Desumidificador e Purificador de Ar Q9", "volt": ""}, {"sku": "RM-DA0009A-001", "desc": "FILTRO HEPA PARA DESUMIDIFICADOR E PURIFICADOR AR Q9 RELAXMEDIC", "volt": ""}, {"sku": "RM-DA0012A", "desc": "DESUMIDIFICADOR E PURIFICADOR DE AR H12", "volt": ""}, {"sku": "RM-DA0012A-001", "desc": "FILTRO HEPA H12", "volt": ""}, {"sku": "RM-DA0017A", "desc": "DESUMIDIFICADOR DE AR LEVDRY", "volt": ""}, {"sku": "RM-DA0019A", "desc": "DESUMIDIFICADOR DE AR CUB-SEC2 EM 1", "volt": ""}, {"sku": "RM-DA0110A", "desc": "Desumidificador Multi Dry", "volt": ""}, {"sku": "RM-DA0110A2", "desc": "DESUMIDIFICADOR DE AR REUTILIZÁVEL MULTI DRY - RELAXMEDIC", "volt": ""}, {"sku": "RM-DA0150A", "desc": "DESUMIDIFICADOR COMPRESSOR CONNECT DRY", "volt": ""}, {"sku": "RM-DA0180A", "desc": "DESUMIDIFICADOR AQUA 1.8", "volt": ""}, {"sku": "RM-DA0308A", "desc": "DESUMIDIFICADOR DE AR MAX700", "volt": ""}, {"sku": "RM-DA0600A", "desc": "DESUMIDIFICADOR BLUE AIR", "volt": ""}, {"sku": "RM-DA0600A CX", "desc": "EMBALAGEM DESUMIDIFICADOR BLUE AIR", "volt": ""}, {"sku": "RM-DA0820A", "desc": "DESUMIDIFICADOR DIGITAL PURE ION MAX.", "volt": ""}, {"sku": "RM-DA0820A CX", "desc": "EMBALAGEM DESUMIDIFICADOR DE DIGITAL PURE ION MAX", "volt": ""}, {"sku": "RM-DA0950A", "desc": "Desumidificador de Ar Elétrico Humidblock 950ml Relaxmedic", "volt": ""}, {"sku": "RM-DA1212A", "desc": "Desumidificador de Ar Compressor Smart Wi-Fi", "volt": ""}, {"sku": "RM-DA2000A", "desc": "DESUMIDIFICADOR GET DRY 1800 RELAXMEDIC", "volt": ""}, {"sku": "RM-DA3000A", "desc": "DESUMIDIFICADOR DE AR DRYSEC", "volt": ""}, {"sku": "RM-DA3000A B", "desc": "DESUMIDIFICADOR DE AR DRYSEC PRETO", "volt": ""}, {"sku": "RM-DA3000A CX", "desc": "EMBALAGEM DESUMIDIFICADOR DE AR DRYSEC", "volt": ""}, {"sku": "RM-DA7510A", "desc": "Desumidificador de Ar Elétrico Antimofo Air Ion Plus 1,8L - Relaxmedic", "volt": ""}, {"sku": "RM-DA7510A CX", "desc": "EMBALAGEM DESUMIDIFICADOR DE AR AIR ION PLUS", "volt": ""}, {"sku": "RM-DA8891A", "desc": "Desumidificador de Ambientes Antimofo Pure Ion Pro", "volt": ""}, {"sku": "RM-DL0051A", "desc": "CINTA LED LUMINA BELT", "volt": ""}, {"sku": "RM-ED0602A", "desc": "Aparelho Medidor de Pressão Arterial Digital Pocket Control", "volt": ""}, {"sku": "RM-ED0802A", "desc": "Aparelho de Pressão Digital Portátil Cardio Control", "volt": ""}, {"sku": "RM-EE0290A", "desc": "Escova Elétrica Relax Flex Care", "volt": ""}, {"sku": "RM-EM1010A", "desc": "Esteira Massageadora 10 motores com Aquecimento - Relaxmedic", "volt": ""}, {"sku": "RM-EM1520", "desc": "Esteira Massageadora Luxo", "volt": ""}, {"sku": "RM-EM3023A", "desc": "Esteira Massageadora Shiatsu Luxury", "volt": ""}, {"sku": "RM-EM3603A", "desc": "ESTEIRA DE MASSAGEM PILLOW TOP.", "volt": ""}, {"sku": "RM-EM3701A", "desc": "Esteira Massageadora Relax Music", "volt": ""}, {"sku": "RM-EM8619A", "desc": "ESTEIRA DE MASSAGEM YOGANI", "volt": ""}, {"sku": "RM-EP1900A", "desc": "CADEIRA ESPREGUIÇADEIRA PORTÁTIL RECLINÁVEL DOBRÁVEL 4 POSIÇÕES", "volt": ""}, {"sku": "RM-ES0610A", "desc": "Almofada Shiatsu Smart Pillow c Aquecimento", "volt": ""}, {"sku": "RM-ES1700A", "desc": "Esteira Massageadora com Shiatsu Massage Bed", "volt": ""}, {"sku": "RM-ES1902A", "desc": "ALMOFADA WIRELESS PILLOW", "volt": ""}, {"sku": "RM-ES3838A", "desc": "Almofada Massageadora Shiatsu Pillow Bivolt - Relaxmedic", "volt": ""}, {"sku": "RM-ES7281A", "desc": "MULTI MASSAGER 3D", "volt": ""}, {"sku": "RM-FD8218A", "desc": "FONTE WATERDROP", "volt": ""}, {"sku": "RM-FM0504A", "desc": "BOTA DE COMPRESSÃO PNEUMÁTICA F10 PRO", "volt": ""}, {"sku": "RM-FM0736A", "desc": "Massageador para os Pés F5 Spinner Massage", "volt": ""}, {"sku": "RM-FM0901A", "desc": "COMPRESSOR DE PANTURRILHA F10 THERMO", "volt": ""}, {"sku": "RM-FM0909A", "desc": "BOTA DE COMPRESSÃO F10 PRO GO", "volt": ""}, {"sku": "RM-FM1818A", "desc": "Massageador para os Pés e Pernas Personal Foot Massager", "volt": ""}, {"sku": "RM-FM2015A", "desc": "Massageador para Pernas e Pés F10 Air Massage", "volt": ""}, {"sku": "RM-FM5001A", "desc": "MASSAGEADOR DE PÉS MULTI 4 EM 1", "volt": ""}, {"sku": "RM-FM5313A", "desc": "MASSAGEADOR DE PÉS STEPFLOW", "volt": ""}, {"sku": "RM-FM7223A", "desc": "BOTA DE COMPRESSÃO F10 PRO THERMO", "volt": ""}, {"sku": "RM-FM8016A", "desc": "MASSAGEADOR SHIATSU FOOT - RELAXMEDIC", "volt": ""}, {"sku": "RM-FM8023A", "desc": "MASSAGEADOR SHIATSU PÉS ZENFEET RELAXMEDIC", "volt": ""}, {"sku": "RM-FS0307A", "desc": "FITA MÉTRICA DIGITAL SMART RX20", "volt": ""}, {"sku": "RM-HA0101A", "desc": "Umidificador de Ar Ultrassônico 2 L Compact Air Relaxmedic", "volt": ""}, {"sku": "RM-HA0106A", "desc": "Umidificador Ultrassonico Ultra Air", "volt": ""}, {"sku": "RM-HA0404A", "desc": "Difusor Elétrico de Ambiente com LED de 14 cores - Relaxmedic", "volt": ""}, {"sku": "RM-HA2401A", "desc": "UMIDIFICADOR AYRO 2L", "volt": ""}, {"sku": "RM-HA2403A", "desc": "UMIDIFICADOR AYRO 3L", "volt": ""}, {"sku": "RM-HD0118A", "desc": "Umidificador de Ar Breath Ion- 3,5 Litros, controle Remoto", "volt": ""}, {"sku": "RM-HD1073A", "desc": "Umidificador de Ar Digital Tower", "volt": ""}, {"sku": "RM-HM3011", "desc": "HAIR MASSAGE", "volt": ""}, {"sku": "RM-IN4545A", "desc": "Irrigador Higienizador Nasal Clean Relaxmedic -Livre de BPA", "volt": ""}, {"sku": "RM-IO0003A", "desc": "Irrigador Oral Family para limpeza dos dentes Relaxmedic", "volt": ""}, {"sku": "RM-IO0006A", "desc": "IRRIGADOR ORAL SEM FIO JET CLEAN - RELAXMEDIC", "volt": ""}, {"sku": "RM-IO0111A", "desc": "IRRIGADOR ORAL JET CLEAN PRO", "volt": ""}, {"sku": "RM-IO1100A", "desc": "IRRIGADOR ORAL SEM FIO MAX CARREGAMENTO WIRELESS RELAXMEDIC", "volt": ""}, {"sku": "RM-IO2222A", "desc": "IRRIGADOR SEM FIO JET FRESH", "volt": ""}, {"sku": "RM-IO3333A", "desc": "IRRIGADOR ORAL JATO DE ÁGUA LIMPA DENTE E APARELHO PRÓTESE - RELAXMEDIC", "volt": ""}, {"sku": "RM-IO6300A", "desc": "Irrigador Oral Cleaning para limpeza dos dentes Relaxmedic", "volt": ""}, {"sku": "RM-IP0135A", "desc": "INALADOR NEBULIZADOR AERO TECH", "volt": ""}, {"sku": "RM-IP7222A", "desc": "INALADOR NEBULIZADOR MINI AERO CARE", "volt": ""}, {"sku": "RM-IP7777A", "desc": "INALADOR PORTÁTIL COM NEBULIZADOR AERO CARE", "volt": ""}, {"sku": "RM-MA0047A", "desc": "MANTA TÉRMICA THERMO PAD", "volt": ""}, {"sku": "RM-MB0719", "desc": "Massageador Elétrico de Banho com 5 acessórios - Relaxmedic", "volt": ""}, {"sku": "RM-MC0001", "desc": "Máscara proteção respiratória - Tecido Lavável 1 unidades", "volt": ""}, {"sku": "RM-MC0095A", "desc": "Máscara de Alta Proteção N95 KN95 FFP2 embalagem individual", "volt": ""}, {"sku": "RM-MC2100A-BP", "desc": "PAR DE BOTAS", "volt": ""}, {"sku": "RM-MC2100A-BU", "desc": "BOTA UNITÁRIA", "volt": ""}, {"sku": "RM-MC2100A-LB", "desc": "ACESSÓRIO LOMBAR", "volt": ""}, {"sku": "RM-MC2100A-OM", "desc": "ACESSÓRIOS BRAÇOS", "volt": ""}, {"sku": "RM-MC2100A-UC", "desc": "UNIDADE CENTRAL", "volt": ""}, {"sku": "RM-ME0033A", "desc": "Massageador TENS ANVISA Eletrochoque Fisioterapia Relaxmedic", "volt": ""}, {"sku": "RM-ME0033A-001", "desc": "GEL DE REPOSIÇÃO PARA APARELHO ELETROESTIMULADOR FISIO TENS MULTIUSO", "volt": ""}, {"sku": "RM-ME0034A", "desc": "FISIO TENS PÉS", "volt": ""}, {"sku": "RM-ME0034A-001", "desc": "PAD REPOSIÇÃO FISIO TENS PÉS", "volt": ""}, {"sku": "RM-ME0035A", "desc": "ESTIMULADOR DE PULSO ELETRÔNICO FISIO TENS COSTAS", "volt": ""}, {"sku": "RM-ME0045A", "desc": "ESTIMULADOR DE PULSO ELETRÔNICO FISIO TENS CONTROL", "volt": ""}, {"sku": "RM-MM0380", "desc": "MASSAGEADOR PORTÁTIL MINI RELAX MASSAGE", "volt": ""}, {"sku": "RM-MM1109", "desc": "Massageador Elétrico de Banho Mini Bath - Relaxmedic", "volt": ""}, {"sku": "RM-MM8001A", "desc": "MASSAGEADOR PORTÁTIL SNUG MASSAGE", "volt": ""}, {"sku": "RM-MP0005A", "desc": "MASSAGEADOR PISTOLA DEEP ZYRE IA", "volt": ""}, {"sku": "RM-MP0113A", "desc": "MASSAGEADOR ELÉTRICO PISTOLA MINI DEEP THERAPY - RELAXMEDIC", "volt": ""}, {"sku": "RM-MP0212A", "desc": "MASSAGEADOR DE PESCOÇO GRAY 6D LITE", "volt": ""}, {"sku": "RM-MP0340A", "desc": "MASSAGEADOR DE PESCOÇO BLUE 6D", "volt": ""}, {"sku": "RM-MP040", "desc": "MASSAGEADOR CORPORAL PARA BANHO 2 IN 1 MASSAGE", "volt": ""}, {"sku": "RM-MP0630A", "desc": "Massageador Elétrico Portátil Corporal Orbit Touch - Sem Fio", "volt": ""}, {"sku": "RM-MP0651A", "desc": "MASSAGEADOR ELÉTRICO PROFISSIONAL PISTOLA DEEP THERAPY - RELAXMEDIC", "volt": ""}, {"sku": "RM-MP0651A CX", "desc": "EMBALAGEM DO MASSAGEADOR ELETRICO DEEP THERAPY", "volt": ""}, {"sku": "RM-MP0831A", "desc": "ORBIT TOUCH LITE", "volt": ""}, {"sku": "RM-MP100", "desc": "PYRAMID MASSAGE", "volt": ""}, {"sku": "RM-MP100A", "desc": "PYRAMID MASSAGE", "volt": ""}, {"sku": "RM-MP101", "desc": "HUMAN MASSAGE", "volt": ""}, {"sku": "RM-MP101A-T", "desc": "HUMAN MASSAGE A", "volt": ""}, {"sku": "RM-MP1112A", "desc": "MASSAGEADOR MANUAL DUO PRESS", "volt": ""}, {"sku": "RM-MP1300A", "desc": "CUBO RECOVERY DUOLIVIUM", "volt": ""}, {"sku": "RM-MP2000A", "desc": "MASSAGEADORA PISTOLA MIODEEP", "volt": ""}, {"sku": "RM-MP2016A", "desc": "Massageador Eletrico Sem Fio Wireless Touch Bivolt - Relaxmedic", "volt": ""}, {"sku": "RM-MP20A", "desc": "ROLLER MASSAGE", "volt": ""}, {"sku": "RM-MP2191A", "desc": "MASSAGEADOR MANUAL BACK PRESS", "volt": ""}, {"sku": "RM-MP2192A", "desc": "MASSAGEADOR MANUAL FOUR PRESS", "volt": ""}, {"sku": "RM-MP2198A", "desc": "MASSAGEADOR MANUAL ROLL PRESS", "volt": ""}, {"sku": "RM-MP2400A", "desc": "MASSAGEADOR PISTOLA DEEP-CRYO", "volt": ""}, {"sku": "RM-MP4000A", "desc": "MASSAGEADOR PISTOLA DEEP THERAPY FLEX", "volt": ""}, {"sku": "RM-MP4018A", "desc": "Massageador Elétrico Orbital 2600 Rotações - Relaxmedic", "volt": ""}, {"sku": "RM-MP5009A", "desc": "MASSAGEADOR RELAXBALL", "volt": ""}, {"sku": "RM-MP5011A", "desc": "MASSAGEADOR RELAXTUBE", "volt": ""}, {"sku": "RM-MP5555A", "desc": "Massageador Shiatsu Neck Plus Com Aquecimento - Relaxmedic", "volt": ""}, {"sku": "RM-MP6570A", "desc": "MASSAGEADOR ELETRICO BODY THERAPY C/ AQUECIMENTO RELAXMEDIC", "volt": ""}, {"sku": "RM-MP6570A-IN", "desc": "MASSAGEADOR ELETRICO BODY THERAPY C/ AQUECIMENTO RELAXMEDIC", "volt": ""}, {"sku": "RM-MP8110A", "desc": "NEW INTENSE MASSAGER", "volt": ""}, {"sku": "RM-MP8118A", "desc": "Massageador Eletrico Corporal Hammer Super Massage - Relaxmedic", "volt": ""}, {"sku": "RM-MP8118A 127V CX", "desc": "EMBALAGEM HAMMER SUPER MASSAGE 127V", "volt": "127V"}, {"sku": "RM-MP8118A 220V CX", "desc": "EMBALAGEM HAMMER SUPER MASSAGE 220V", "volt": "220V"}, {"sku": "RM-OR8000", "desc": "JOELHEIRA ELÁSTICA DE COMPRESSÃO ADERIS", "volt": ""}, {"sku": "RM-OR8100", "desc": "COTOVELEIRA ELÁSTICA DE COMPRESSÃO ADERIS", "volt": ""}, {"sku": "RM-OR8200", "desc": "TORNOZELEIRA ELÁSTICA DE COMPRESSÃO ADERIS", "volt": ""}, {"sku": "RM-PM0004A", "desc": "POLTRONA SHIATSU G4", "volt": ""}, {"sku": "RM-PM0640A", "desc": "Poltrona Massageadora Royal Comfort Relaxmedic", "volt": ""}, {"sku": "RM-PM1092A", "desc": "POLTRONA MASSAGEADORA RELAXMEDIC LINE 3D", "volt": ""}, {"sku": "RM-PM1717A", "desc": "Poltrona Smart Chair", "volt": ""}, {"sku": "RM-PM2121A", "desc": "Poltrona do Papai Massageadora Reclinável Relaxmedic", "volt": ""}, {"sku": "RM-PM2121A CX", "desc": "EMBALAGEM DA POLTRONA DO PAPAI", "volt": ""}, {"sku": "RM-PM286A", "desc": "Poltrona Massageadora Life | Gravidade Zero 8 massagens", "volt": ""}, {"sku": "RM-PM5656A", "desc": "POLTRONA FLEX PAPAI C/ OTOMANA", "volt": ""}, {"sku": "RM-PM6969A", "desc": "Poltrona Massageadora Shiatsu Dream", "volt": ""}, {"sku": "RM-PM8161", "desc": "Poltrona Massageadora com Elevação Power Papai", "volt": ""}, {"sku": "RM-PM8161A", "desc": "POLTRONA MASSAGEADORA POWER PAPAI - RELAXMEDIC", "volt": ""}, {"sku": "RM-PM8258B", "desc": "Poltrona Shiatsu Leather", "volt": ""}, {"sku": "RM-PO8300", "desc": "PALMILHA ORTOPÉDICA ADERIS LINHA DR. COLUNA", "volt": ""}, {"sku": "RM-PR5000A-001", "desc": "GEL DE REPOSIÇÃO PARA ELETROESTIMULADOR MUSCULAR MULTIUSO POWER RELAX", "volt": ""}, {"sku": "RM-PR5001A", "desc": "ELETROESTIMULADOR MUSCULAR ABDÔMEN POWER RELAX", "volt": ""}, {"sku": "RM-PR5002A", "desc": "ELETROESTIMULADOR MUSCULAR BRAÇOS POWER RELAX", "volt": ""}, {"sku": "RM-PR5002A-001", "desc": "GEL DE REPOSIÇÃO PARA ELETROESTIMULADOR MUSCULAR BRAÇOS POWER RELAX", "volt": ""}, {"sku": "RM-PR5003A", "desc": "ELETROESTIMULADOR MUSCULAR COSTAS POWER RELAX", "volt": ""}, {"sku": "RM-PR5004A", "desc": "ELETROESTIMULADOR MUSCULAR GLÚTEOS POWER RELAX", "volt": ""}, {"sku": "RM-PR5005A", "desc": "ELETROESTIMULADOR MUSCULAR PERNAS POWER RELAX", "volt": ""}, {"sku": "RM-SA0001", "desc": "CREATINABALANCE - SABOR ABACAXI & COCO", "volt": ""}, {"sku": "RM-SA0002", "desc": "CREATINABALANCE - SABOR HORTELÃ E GENGIBRE", "volt": ""}, {"sku": "RM-SA0010", "desc": "CREATINA PUREFORCE - SABOR CHICLETE", "volt": ""}, {"sku": "RM-SA0027", "desc": "COLLAGEN PROTEIN ZELL-IN BAUNILHA", "volt": ""}, {"sku": "RM-SA0030", "desc": "COLLAGEN PROTEIN ZELL-IN PUDIM DE CHOCOLATE", "volt": ""}, {"sku": "RM-SA0067", "desc": "CREATINA MASTIGÁVEL BALANCE 30 COMPRIMIDOS RELAXMEDIC HEALTH", "volt": ""}, {"sku": "RM-SA0072", "desc": "CREATINA MASTIGÁVEL BALANCE 90 COMPRIMIDOS RELAXMEDIC HEALTH", "volt": ""}, {"sku": "RM-SA0099-60", "desc": "CREATINA BALANCE CARAMELO", "volt": ""}, {"sku": "RM-SA0099-SACHE02", "desc": "CREATINA CARAMELO SACHE", "volt": ""}, {"sku": "RM-SA0100", "desc": "CREATINA BALANCE BRIGADEIRO 60", "volt": ""}, {"sku": "RM-SA0100-SACHE02", "desc": "CREATINA BRIGADEIRO SACHE", "volt": ""}, {"sku": "RM-SA0800", "desc": "CREATINABALANCE - STICK", "volt": ""}, {"sku": "RM-SA1047", "desc": "MULTIVIT RELAXMEDIC", "volt": ""}, {"sku": "RM-SA1077", "desc": "RELAX NIGHT", "volt": ""}, {"sku": "RM-SA1155", "desc": "RELAXPLENARA", "volt": ""}, {"sku": "RM-SA1208", "desc": "JOINT COMPLEX", "volt": ""}, {"sku": "RM-SA1255", "desc": "A-Z MULHER", "volt": ""}, {"sku": "RM-SA1310", "desc": "BEAUTY SKIN RELAXMEDIC", "volt": ""}, {"sku": "RM-SA1522", "desc": "HARMONIS", "volt": ""}, {"sku": "RM-SA1544", "desc": "UP-BOOST", "volt": ""}, {"sku": "RM-SA1641", "desc": "Q10+", "volt": ""}, {"sku": "RM-SA1641-200", "desc": "Q10+ 200MG", "volt": ""}, {"sku": "RM-SA2026", "desc": "BIOSTRUCT MCA", "volt": ""}, {"sku": "RM-SA2160", "desc": "ÔMEGA 3 CONCENTRADO", "volt": ""}, {"sku": "RM-SA2255", "desc": "GABYN", "volt": ""}, {"sku": "RM-SA3355", "desc": "TRIMAG", "volt": ""}, {"sku": "RM-SA5100", "desc": "CREATINA BALANCE 100G", "volt": ""}, {"sku": "RM-SA5182", "desc": "CREATINA BALANCE RELAXMEDIC", "volt": ""}, {"sku": "RM-SA6716", "desc": "VITASTRONG", "volt": ""}, {"sku": "RM-SA6900", "desc": "CREATINA PURE FORCE", "volt": ""}, {"sku": "RM-SA6955", "desc": "ARDORE", "volt": ""}, {"sku": "RM-TD0403A", "desc": "TERMÔMETRO DIGITAL CLEAN VIEW", "volt": ""}, {"sku": "RM-TD3022A", "desc": "TERMÔMETRO DIGITAL INFRAVERMELHO RÁPIDO TESTA RELAXMEDIC", "volt": ""}, {"sku": "RM-TD4726A", "desc": "Termômetro Digital Flex com medição em 10 segundos", "volt": ""}, {"sku": "RM-VL0006", "desc": "Trio de Velas LED com controle Luxor", "volt": ""}, {"sku": "RM-VL0015", "desc": "VELA SQUARE LED", "volt": ""}, {"sku": "RM1234454T", "desc": "TESTE", "volt": ""}, {"sku": "SKU-0001", "desc": "Kit Back Shiatsu Seat e Shiatsu Pillow", "volt": ""}, {"sku": "SKU-0002", "desc": "KIT SECADOR POWER TRAVEL ION E PRANCHA INFRARED CERAMIC", "volt": ""}, {"sku": "SKU-0002M", "desc": "KIT ELETROESTIMULADOR FISIO TENS + GEL REPOSIÇÃO RELAXMEDIC", "volt": ""}, {"sku": "SKU-0003", "desc": "Kit Esteira Massageadora Massage Mat e Assento Ultra Massage", "volt": ""}, {"sku": "SKU-0003M", "desc": "KIT MASSAGEADOR SHIATSU FOOT + GEL ARNICA", "volt": ""}, {"sku": "SKU-0004", "desc": "KIT MASSAGE MAT E PRANCHA INFRARED", "volt": ""}, {"sku": "SKU-0004M", "desc": "KIT PISTOLA DEEP THERAPY + ORBIT MASSAGE 127V", "volt": "127V"}, {"sku": "SKU-0005", "desc": "KIT MASSAGE MAT E SNUG MASSAGE", "volt": ""}, {"sku": "SKU-0005M", "desc": "KIT PISTOLA DEEP THERAPY + ORBIT MASSAGE 220V", "volt": "220V"}, {"sku": "SKU-0006", "desc": "Kit Desumidificador de Ar Antimofo Pure Ion Pro e Blue Air", "volt": ""}, {"sku": "SKU-0006M", "desc": "KIT 2 PURE ION MAX", "volt": ""}, {"sku": "SKU-0007", "desc": "Kit Poltrona do Papai e Esteira Massageadora Massage Mat", "volt": ""}, {"sku": "SKU-0007M", "desc": "KIT FISIO TENS CONTROL + PAD PÉS", "volt": ""}, {"sku": "SKU-0008", "desc": "POLTRONA DREAM E ESTEIRA MASSAGE MAT", "volt": ""}, {"sku": "SKU-0008M", "desc": "Kit Beleza 1", "volt": ""}, {"sku": "SKU-0009", "desc": "Massageador Eletrico Hammer Super Massage + Orbit 127V", "volt": "127V"}, {"sku": "SKU-0009M", "desc": "KIT 2 TRAVESSEIROS BAMBU", "volt": ""}, {"sku": "SKU-0010", "desc": "MASSAGEADOR ELETRICO HAMMER SUPER MASSAGE + ORBIT 220V", "volt": "220V"}, {"sku": "SKU-0010M", "desc": "Kit Beleza 2", "volt": ""}, {"sku": "SKU-0011", "desc": "KIT SECADOR POWER TRAVEL ION E PRANCHA PRETTY SLIM", "volt": ""}, {"sku": "SKU-0011M", "desc": "Kit Beleza 3", "volt": ""}, {"sku": "SKU-0012", "desc": "Umidificador de Ar Tower 6,5L + Umidificador Compact 2L Biv", "volt": ""}, {"sku": "SKU-0012M", "desc": "Kit Beleza 4", "volt": ""}, {"sku": "SKU-0013", "desc": "Massageador Eletrico Orbit 127V + 2 cremes redutores", "volt": "127V"}, {"sku": "SKU-0014", "desc": "MASSAGEADOR ELETRICO ORBIT 220V E 2 CREMES REDUTORES", "volt": "220V"}, {"sku": "SKU-0014M", "desc": "KIT BALANÇA BODYSCAN PRETA + BALANÇA DE COZINHA X6 + MASSAGEADOR DEEP THERAPY", "volt": ""}, {"sku": "SKU-0015", "desc": "KIT HAMMER MASSAGE 127 V + INTENSE RELAX + GET SLIM", "volt": "127V"}, {"sku": "SKU-0015M", "desc": "CREATINA GO BALANCE + BALANÇA BODYSCAN PRO", "volt": ""}, {"sku": "SKU-0016", "desc": "KIT HAMMER MASSAGE 220 V + INTENSE RELAX + GET SLIM", "volt": "220V"}, {"sku": "SKU-0016M", "desc": "KIT CREATINA + PISTOLA DEEP", "volt": ""}, {"sku": "SKU-0017", "desc": "KIT UMIDIFICADOR DIGITAL BREATH ION + UMIDIFICADOR TOWER", "volt": ""}, {"sku": "SKU-0017M", "desc": "KIT CREATINA + BALANÇA BIOIMPEDÂNCIA", "volt": ""}, {"sku": "SKU-0018", "desc": "KIT UMIDIFICADOR DIGITAL BREATH ION + MULTI LAMP", "volt": ""}, {"sku": "SKU-0018M", "desc": "KIT CREATINA + BALANÇA SMART", "volt": ""}, {"sku": "SKU-0019", "desc": "KIT PERFECT MAKE UP + TOALHA CLEAN MAKE UP", "volt": ""}, {"sku": "SKU-0019M", "desc": "KIT CREATINA MASTIGAVEL 3O + BALANÇA BIO APP", "volt": ""}, {"sku": "SKU-0020", "desc": "KIT F10 AIR MASSAGE + MASSAGEADOR WIRELESS TOUCH", "volt": ""}, {"sku": "SKU-0020M", "desc": "KIT 2: BELEZA PARA O OLHAR", "volt": ""}, {"sku": "SKU-0021", "desc": "KIT VELA LUXOR LED + VELA SQUARE LED", "volt": ""}, {"sku": "SKU-0021M", "desc": "KIT 1: CUIDADOS ESSENCIAIS PARA UNHAS", "volt": ""}, {"sku": "SKU-0022", "desc": "KIT ORAL CLEANING + RELAX FLEX CARE", "volt": ""}, {"sku": "SKU-0022M", "desc": "KIT 3: CUIDADOS COMPLETOS PARA UNHAS", "volt": ""}, {"sku": "SKU-0023", "desc": "Kit c/ 2 Mata Mosquitos e Insetos Silencioso Relaxmedic 127V", "volt": "127V"}, {"sku": "SKU-0023M", "desc": "KIT HARMONIS + MULTIVIT", "volt": ""}, {"sku": "SKU-0024", "desc": "Kit c/ 2 Mata Mosquitos e Insetos Silencioso Relaxmedic 220V", "volt": "220V"}, {"sku": "SKU-0024M", "desc": "MULTIVIT + ÔMEGA 3 + Q10+", "volt": ""}, {"sku": "SKU-0025", "desc": "KIT 2 IN 1 MASSAGE + INTENSE RELAX + GET SLIM", "volt": ""}, {"sku": "SKU-0025M", "desc": "CREATINA BALANCE + UP-BOOST + VITASTRONG", "volt": ""}, {"sku": "SKU-0026", "desc": "KIT PARA MAQUIAGEM, BELEZA E MANICURE | RELAXBEAUTY", "volt": ""}, {"sku": "SKU-0026M", "desc": "VITASTRONG + JOINT COMPLEX", "volt": ""}, {"sku": "SKU-0027", "desc": "DEPILADOR ELÉTRICO + ESFOLIADOR + KIT MANICURE + LIXA", "volt": ""}, {"sku": "SKU-0027M", "desc": "RELAX NIGHT + HARMONIS", "volt": ""}, {"sku": "SKU-0028", "desc": "KIT DE MAQUIAGEM E TOALHA DEMAQUILANTE RELAXBEAUTY", "volt": ""}, {"sku": "SKU-0028M", "desc": "BEAUTY SKIN + HARMONIS", "volt": ""}, {"sku": "SKU-0029", "desc": "KIT MASSAGE MAT + BALANÇA DIGITAL ELEGANCE APP", "volt": ""}, {"sku": "SKU-0029M", "desc": "BOTA DE COMPRESSÃO PNEUMÁTICA F10 PRO G", "volt": ""}, {"sku": "SKU-0030", "desc": "MASSAGEADOR ORBIT 127V + GET SLIM + BALANÇA ELEGANCE APP", "volt": "127V"}, {"sku": "SKU-0030M", "desc": "BOTA DE COMPRESSÃO PNEUMÁTICA F10 PRO GG", "volt": ""}, {"sku": "SKU-0031", "desc": "MASSAGEADOR ORBIT 220V + GET SLIM + BALANÇA ELEGANCE APP", "volt": "220V"}, {"sku": "SKU-0031M", "desc": "MASSAGEADOR ELETRICO BODY THERAPY C/ AQUECIMENTO RELAXMEDIC", "volt": ""}, {"sku": "SKU-0032", "desc": "KIT COM 3 TOLHAS DEMAQUILANTES CLEAN MAKE UP RELAXBEAUTY", "volt": ""}, {"sku": "SKU-0032M", "desc": "MASSAGEADOR ELETRICO BODY THERAPY C/ AQUECIMENTO RELAXMEDIC", "volt": ""}, {"sku": "SKU-0033", "desc": "KIT CHAPINHA PRETTY SLIM + ESCOVA ALISADORA WONDER BRUSH", "volt": ""}, {"sku": "SKU-0033M", "desc": "ELETROESTIMULADOR MUSCULAR ABDÔMEN POWER RELAX", "volt": ""}, {"sku": "SKU-0034", "desc": "MASSAGEADOR ELETRICO WIRELESS + 2 GET SLIM + 1 INTENSE RELAX", "volt": ""}, {"sku": "SKU-0034M", "desc": "ELETROESTIMULADOR MUSCULAR BRAÇOS POWER RELAX", "volt": ""}, {"sku": "SKU-0035", "desc": "KIT COM 2 DESUMIDIFICADOR DE AMBIENTE ANTIMOFO BLUE AIR", "volt": ""}, {"sku": "SKU-0035M", "desc": "ELETROESTIMULADOR MUSCULAR COSTAS POWER RELA", "volt": ""}, {"sku": "SKU-0036", "desc": "KIT COM 3 DESUMIDIFICADOR DE AMBIENTE ANTIMOFO DE CABIDE", "volt": ""}, {"sku": "SKU-0036M", "desc": "ELETROESTIMULADOR MUSCULAR GLÚTEOS POWER RELAX", "volt": ""}, {"sku": "SKU-0037", "desc": "Kit Desumidificador  Blue Air  + Desumidificador Multi Dry", "volt": ""}, {"sku": "SKU-0037M", "desc": "ELETROESTIMULADOR MUSCULAR PERNAS POWER RELAX", "volt": ""}, {"sku": "SKU-0038", "desc": "Esteira Massageadora + Massageador  Eletrico Orbit 127V", "volt": "127V"}, {"sku": "SKU-0038M", "desc": "GEL DE REPOSIÇÃO PARA ELETROESTIMULADOR MUSCULAR BRAÇOS POWER RELAX", "volt": ""}, {"sku": "SKU-0039", "desc": "Esteira Massageadora + Massageador  Eletrico Orbit 220V", "volt": "220V"}, {"sku": "SKU-0039M", "desc": "GEL DE REPOSIÇÃO PARA ELETROESTIMULADOR MUSCULAR MULTIUSO POWER RELAX", "volt": ""}, {"sku": "SKU-0040", "desc": "Esteira Massageadora Massage Mat + Balança Digital Body Fit", "volt": ""}, {"sku": "SKU-0040M", "desc": "BOTA DE COMPRESSÃO PNEUMÁTICA F10 PRO G + MASSAGEADOR PISTOLA DEEP ZYRE IA", "volt": ""}, {"sku": "SKU-0041", "desc": "Esteira Massageadora +  Massageador Elétrico Orbit + Hammer 110V", "volt": "110V"}, {"sku": "SKU-0041M", "desc": "BOTA DE COMPRESSÃO PNEUMÁTICA F10 PRO GG + MASSAGEADOR PISTOLA DEEP ZYRE IA", "volt": ""}, {"sku": "SKU-0042", "desc": "Esteira Massageadora +  Massageador Elétrico Orbit + Hammer 220V", "volt": "220V"}, {"sku": "SKU-0043", "desc": "Medidor Pocket Control + Termômetro Clean View", "volt": ""}, {"sku": "SKU-0044", "desc": "Balança Digital Elegance App + Bolsa Thermo Adapt", "volt": ""}, {"sku": "SKU-0045", "desc": "Balança Digital Elegance App + Cortador Relax Multi Groom", "volt": ""}, {"sku": "SKU-0046", "desc": "Balanças Digital Elegance App + Digital Body Fit", "volt": ""}, {"sku": "SKU-0047", "desc": "Balança Digital Elegance App + Termômetro Digital Flex", "volt": ""}, {"sku": "SKU-0048", "desc": "Balança Digital Body Fit + Termômetro Digital Clean View", "volt": ""}, {"sku": "SKU-0049", "desc": "KIT TERMÔMETRO CLEAN VIEW RELAXMEDIC – 6 UNI", "volt": ""}, {"sku": "SKU-0050", "desc": "Massageador Elétrico Orbital 110V + Escova Facial + Creme Redutor", "volt": "110V"}, {"sku": "SKU-0051", "desc": "Massageador Elétrico Orbital 220V + Escova Facial + Creme Redutor", "volt": "220V"}, {"sku": "SKU-0052", "desc": "KIT DESUMIDIFICADORES 2 BLUE AIR + 2 MULTI DRY | RELAXMEDIC", "volt": ""}, {"sku": "SKU-0053", "desc": "KIT 2 ASSENTOS ULTRA MASSAGE | RELAXMEDIC", "volt": ""}, {"sku": "SKU-0054", "desc": "Escova de limpeza Facial + Chapinha com Infravermelho", "volt": ""}, {"sku": "SKU-0055", "desc": "Kit Massageador Facial Clean Pro + Orbit Massage 110V | Relaxmedic", "volt": "110V"}, {"sku": "SKU-0056", "desc": "Kit Massageador Facial Clean Pro + Orbit Massage 220V | Relaxmedic", "volt": "220V"}, {"sku": "SKU-0057", "desc": "Kit Poltrona do Papai Relax + Balança Digital Body Fit | Relaxmedic", "volt": ""}, {"sku": "SKU-0058", "desc": "Kit 2 Balanças Digitais Body Fit | Relaxmedic", "volt": ""}, {"sku": "SKU-0059", "desc": "Kit com 3 Máscaras protetoras facial acrílica Face Shield", "volt": ""}, {"sku": "SKU-0060", "desc": "Kit com 8 Máscaras protetoras facial acrílica Face Shield", "volt": ""}, {"sku": "SKU-0061", "desc": "Máscara proteção respiratória - Tecido Lavável 6 unidades", "volt": ""}, {"sku": "SKU-0062", "desc": "Máscara proteção respiratória - Tecido Lavável 21 unidades", "volt": ""}, {"sku": "SKU-0063", "desc": "1 Máscara Acrilico Face shield + 3 mascara de tecido", "volt": ""}, {"sku": "SKU-0064", "desc": "3 Máscara Acrílico Face Shield + 12 mascara de tecido", "volt": ""}, {"sku": "SKU-0065", "desc": "Kit 2 Umidificadores Compact Air - Relaxmedic", "volt": ""}, {"sku": "SKU-0066", "desc": "Máscara proteção respiratória - Tecido Lavável 3 unidades", "volt": ""}, {"sku": "SKU-0067", "desc": "Máscara de Proteção TNT camada tripla descartável - 50 unid", "volt": ""}, {"sku": "SKU-0068", "desc": "Kit 2 Mata Mosquito Killer Elétrico 110V – Relaxmedic.", "volt": "110V"}, {"sku": "SKU-0069", "desc": "Kit 2 Mata Mosquito Killer Elétrico 220V – Relaxmedic", "volt": "220V"}, {"sku": "SKU-0070", "desc": "KIT 3 Máscara de Proteção N95 / PFF2 descartável 3 camadas", "volt": ""}, {"sku": "SKU-0071", "desc": "KIT 10 Máscara de Proteção N95 / PFF2 descartável 3 camadas", "volt": ""}, {"sku": "SKU-0072", "desc": "Assento Ortopédico Dr Coluna  Almofada Pernas Viscoelástico", "volt": ""}, {"sku": "SKU-0073", "desc": "Assento Ortopédico Dr Coluna + Travesseiro de Pescoço Gel", "volt": ""}, {"sku": "SKU-0074", "desc": "Travesseiro Anti Refluxo + Ortopédico Gel Dr. Coluna", "volt": ""}, {"sku": "SKU-0075", "desc": "Almofada Cóccix + Almofada Ortopédica Costas - Dr Coluna", "volt": ""}, {"sku": "SKU-0076", "desc": "10 Mascaras Protecao n95 KN95 PFF2 Embalagem Individual", "volt": ""}, {"sku": "SKU-0077", "desc": "Massageador Elétrico Hammer 110V + Massageador de Banho", "volt": "110V"}, {"sku": "SKU-0078", "desc": "Massageador Elétrico Hammer 220V + Massageador de Banho", "volt": "220V"}, {"sku": "SKU-0079", "desc": "Massageador Eletrico Hammer + Orbit 110V + Celulite+Massagem", "volt": "110V"}, {"sku": "SKU-0080", "desc": "Massageador Eletrico Hammer + Orbit 220V + Celulite+Massagem", "volt": "220V"}, {"sku": "SKU-0081", "desc": "Kit Desumidificador de Ambientes Antimofo Pure Ion Pro", "volt": ""}, {"sku": "SKU-0082", "desc": "Massageador Elétrico Hammer 110V + Barbeador Sport Barber", "volt": "110V"}, {"sku": "SKU-0083", "desc": "Massageador Elétrico Hammer 220V + Barbeador Sport Barber", "volt": "220V"}, {"sku": "SKU-0084", "desc": "Aparador de Pelos Lady e Escova de limpeza Facial Clean Pro", "volt": ""}, {"sku": "SKU-0085", "desc": "Escova Modeladora Ultra Dry Professional 110V  Prancha Slim", "volt": "110V"}, {"sku": "SKU-0086", "desc": "Escova Modeladora Ultra Dry Professional 220V  Prancha Slim", "volt": "220V"}, {"sku": "SKU-0087", "desc": "Almofada Shiatsu Pillow + Massageador Elétrico Hammer 110V", "volt": "110V"}, {"sku": "SKU-0088", "desc": "Almofada Shiatsu Pillow + Massageador Elétrico Hammer 220V", "volt": "220V"}, {"sku": "SKU-0089", "desc": "Massageador Shiatsu Lombar Mousse Alivio Dor Relaxmedic", "volt": ""}, {"sku": "SKU-0090", "desc": "Massageador Profissional 127V Mousse Alivio Dor Relaxmedic", "volt": "127V"}, {"sku": "SKU-0091", "desc": "Massageador Profissional 220V Mousse Alivio Dor Relaxmedic", "volt": "220V"}, {"sku": "SKU-0092", "desc": "Massageador Shiatsu Pescoço Mousse Alivio Dor Relaxmedic", "volt": ""}, {"sku": "SKU-0093", "desc": "Massageador Elétrico Sem Fio Mousse Alivio Dor Relaxmedic", "volt": ""}, {"sku": "SKU-0094", "desc": "Bolsa Termica Gel Quente Fria Mousse Alivio Dor Relaxmedic", "volt": ""}, {"sku": "SKU-0095", "desc": "Bolsa Termica Gel Quente Fria Mousse Alivio Dor Relaxmedic", "volt": ""}, {"sku": "SKU-0096", "desc": "Mascara KN95 Álcool Spray Antisséptico Hidratante Relaxmedic", "volt": ""}, {"sku": "SKU-0097", "desc": "Mascara KN95 Álcool Spray Antisséptico Hidratante Relaxmedic", "volt": ""}, {"sku": "SKU-0098", "desc": "Mascara KN95 Termômetro Álcool Spray Hidratante Relaxmedic", "volt": ""}, {"sku": "SKU-0099", "desc": "Mascara KN95 Termômetro Álcool Spray Hidratante Relaxmedic", "volt": ""}, {"sku": "SKU-0100", "desc": "Mata Mosquito 127v Insetos Moscas Repelente Spray Relaxmedic", "volt": ""}, {"sku": "SKU-0101", "desc": "Mata Mosquito 220v Insetos Moscas Repelente Spray Relaxmedic", "volt": ""}, {"sku": "SKU-0102", "desc": "Mata Mosquito 127v Insetos Moscas Repelente Spray Relaxmedic", "volt": ""}, {"sku": "SKU-0103", "desc": "Mata Mosquito 220v Insetos Moscas Repelente Spray Relaxmedic", "volt": ""}, {"sku": "SKU-0104", "desc": "Barbeador Elétrico Multi Groom Espuma de Barbear Relaxmedic", "volt": ""}, {"sku": "SKU-0105", "desc": "Aparador Barbeador Cabelo Pelo  Espuma de Barbear Relaxmedic", "volt": ""}, {"sku": "SKU-0106", "desc": "Massageador Profissional 127V Gelo Spray Dor Relaxmedic", "volt": "127V"}, {"sku": "SKU-0107", "desc": "Massageador Profissional 220V Gelo Spray Dor Relaxmedic", "volt": "220V"}, {"sku": "SKU-0108", "desc": "Massageador Profissional 127V Gelo Spray Dor Relaxmedic", "volt": "127V"}, {"sku": "SKU-0109", "desc": "Massageador Profissional 220V Gelo Spray Dor Relaxmedic", "volt": "220V"}, {"sku": "SKU-0110", "desc": "Massageador Profissional Sem Fio Gelo Spray Dor Relaxmedic", "volt": ""}, {"sku": "SKU-0111", "desc": "Massageador Shiatsu Lombar Gelo Spray Dor Relaxmedic", "volt": ""}, {"sku": "SKU-0112", "desc": "KIT HAMMER CINZA 127V + SPORT BARBER", "volt": "127V"}, {"sku": "SKU-0113", "desc": "KIT HAMMER CINZA 220V + SPORT BARBER", "volt": "220V"}, {"sku": "SKU-0114", "desc": "KIT SHIATSU PILLOW + HAMMER CINZA 127V", "volt": "127V"}, {"sku": "SKU-0115", "desc": "KIT SHIATSU PILLOW + HAMMER  CINZA 220V", "volt": "220V"}, {"sku": "SKU-0116", "desc": "MASSAGEADOR PROFISSIONAL 110V MOUSSE ALIVIO DOR RELAXMEDIC", "volt": "110V"}, {"sku": "SKU-0117", "desc": "MASSAGEADOR PROFISSIONAL 220V MOUSSE ALIVIO DOR RELAXMEDIC", "volt": "220V"}, {"sku": "SKU-0122", "desc": "Bolsa Gel Térmica para Compressa Quente Frio Dor Relaxmedic", "volt": ""}, {"sku": "SKU-0123", "desc": "Kit Travesseiro Ortopedico Viscoelástico NASA Gel Dr Coluna", "volt": ""}, {"sku": "SKU-0124", "desc": "Kit com 4 Álcool Spray Aerossol Antisséptico 70% Hidratante", "volt": ""}, {"sku": "SKU-0125", "desc": "KIT 2 POLTRONAS DO PAPAI RELAX PRETA", "volt": ""}, {"sku": "SKU-0126", "desc": "KIT 2 POLTRONAS DO PAPAI RELAX MARROM", "volt": ""}, {"sku": "SKU-0127", "desc": "MASSAGEADOR HAMMER BRANCO 127V + GEL INTENSE RELAX", "volt": "127V"}, {"sku": "SKU-0128", "desc": "MASSAGEADOR HAMMER BRANCO 220V + GEL INTENSE RELAX", "volt": "220V"}, {"sku": "SKU-0129", "desc": "MASSAGEADOR HAMMER CINZA 127V + GEL INTENSE RELAX", "volt": "127V"}, {"sku": "SKU-0130", "desc": "MASSAGEADOR HAMMER CINZA 220V + GEL INTENSE RELAX", "volt": "220V"}, {"sku": "SKU-0131", "desc": "Kit Desumidificador Air Ion + Drysec", "volt": ""}, {"sku": "SKU-0132", "desc": "KIT WIRELESS + MOUSSE SPORT FISIO", "volt": ""}, {"sku": "SKU-0133", "desc": "KIT ORBIT 110V  + MOUSSE SPORT FISIO", "volt": "110V"}, {"sku": "SKU-0134", "desc": "KIT ORBIT 220V  + MOUSSE SPORT FISIO", "volt": "220V"}, {"sku": "SKU-0135", "desc": "KIT HAMMER 127V  + MOUSSE SPORT FISIO", "volt": "127V"}, {"sku": "SKU-0136", "desc": "KIT HAMMER 220V  + MOUSSE SPORT FISIO", "volt": "220V"}, {"sku": "SKU-0137", "desc": "KIT 03  MOUSSES SPORT FISIO", "volt": ""}, {"sku": "SKU-0138", "desc": "Kit Hammer Branco 127V + Mousse Efervecente", "volt": "127V"}, {"sku": "SKU-0139", "desc": "MASSAGEADOR ELÉTRICO SPRAY DOR MUSCULAR SPORT FISIO ARNICA 1", "volt": ""}, {"sku": "SKU-0140", "desc": "Kit Bolsa Térmica Adesiva + Mousse Efervescente Relaxmedic", "volt": ""}, {"sku": "SKU-0141", "desc": "Kit Bolsa Térmica Gel Soft + Mousse Efervescente", "volt": ""}, {"sku": "SKU-0142", "desc": "Kit Bolsa Térmica Pantufa + Mousse Efervescente", "volt": ""}, {"sku": "SKU-0143", "desc": "Kit Bolsa Thermo Adapt + Mousse Efervescente", "volt": ""}, {"sku": "SKU-0144", "desc": "Kit Bolsa Thermo Multiuso + Mousse Efervescente", "volt": ""}, {"sku": "SKU-0146", "desc": "KIT 4 GELO EM SPRAY PARA ALÍVIO DA DOR ARNICA CANDORA MENTOL", "volt": ""}, {"sku": "SKU-0147", "desc": "KIT 4 SPRAY EFEITO GELADO ALÍVIO DOR ARNICA CANFORA MENTOL", "volt": ""}, {"sku": "SKU-0148", "desc": "MASSAGEADOR ELÉTRICO ORBIT 127V GEL ARNICA SPORT FISIO", "volt": "127V"}, {"sku": "SKU-0149", "desc": "MASSAGEADOR ELÉTRICO ORBIT 220V GEL ARNICA SPORT FISIO", "volt": "220V"}, {"sku": "SKU-0150", "desc": "KIT GEL MASSAGEADOR ARNICA SPORT FISIO + HAMMER 127V CINZA", "volt": "127V"}, {"sku": "SKU-0151", "desc": "KIT GEL MASSAGEADOR ARNICA SPORT FISIO + HAMMER 220V CINZA", "volt": "220V"}, {"sku": "SKU-0152", "desc": "KIT GEL MASSAGEADOR DOR ARNICA SPORT FISIO RELAXMEDIC", "volt": ""}, {"sku": "SKU-0153", "desc": "GEL MASSAGEADOR ARNICA + BOLSA RELAX THERMO ADAPT", "volt": ""}, {"sku": "SKU-0155", "desc": "KIT DESUMIDIFICADOR DE AR ANTIMOFO PURE ION MAX E BLUE AIR", "volt": ""}, {"sku": "SKU-0156", "desc": "KIT DESUMIDIFICADORES ANTI MOFO PURE ION MAX + DESUMI DE REUTILIZÁVEL ECOLOGICO MULTI DRY", "volt": ""}, {"sku": "SKU-0157", "desc": "KIT DESUMIDIFICADOR DE AR ANTI MOFO DRYSEC + DESUMIDIFICADOR BLUE AIR", "volt": ""}, {"sku": "SKU-0158", "desc": "KIT 2 UNIDADES DE DESUMIDIFICADOR DE AR ANTI MOFO DRYSEC", "volt": ""}, {"sku": "SKU-0159", "desc": "KIT MASSAGEADOR ELETRICO ORBIT 220V + CREME REDUTOR", "volt": "220V"}, {"sku": "SKU-0160", "desc": "KIT MASSAGEADOR ELETRICO ORBIT 127V + CREME REDUTOR", "volt": "127V"}, {"sku": "SKU-0161", "desc": "Kit Bolsas Thermo Adapt + Thermo Multiuso", "volt": ""}, {"sku": "SKU-0162", "desc": "Kit Bolsas Térmicas Adesivas + Gel Soft", "volt": ""}, {"sku": "SKU-0163", "desc": "MASSAGEADOR TENS ANVISA  FISIOTERAPIA + GEL ARNICA DOR", "volt": ""}, {"sku": "SKU-0164", "desc": "MASSAGEADOR TENS ANVISA FISIOTERAPIA + MOUSSE + GEL ARNICA", "volt": ""}, {"sku": "SX-7650NMA", "desc": "POLTRONA LEISURE CHAIR", "volt": ""}, {"sku": "TE-DA1212A", "desc": "Desumidificador de Ar Compressor Smart Wi-Fi", "volt": ""}, {"sku": "TESTE SABOR", "desc": "TESTE SABOR", "volt": ""}];
+
+// Dados da própria MNL (Cartão CNPJ) — usados como destinatário padrão quando
+// "Consumidor não identificado" é marcado, pois a NF-e desses casos é emitida contra a matriz.
+const MNL = {
+  nome: 'MNL DISTRIBUIDORA E COMERCIO DE ELETRONICOS LTDA',
+  doc: '30.538.015/0001-79',
+  cep: '07753-580',
+  uf: 'SP',
+  cidade: 'CAJAMAR',
+  bairro: 'EMPRESARIAL ANHANGUERA',
+  logradouro: 'AC Rodovia Anhanguera, KM 31, Sentido Norte, Bloco 300, Galpão 20, 19 N 7',
+  numero: '800'
+};
+
+const skuMap = {};
+PRODUTOS.forEach(p => skuMap[p.sku] = p);
+
+const skuList = document.getElementById('skuList');
+const frag = document.createDocumentFragment();
+PRODUTOS.forEach(p => {
+  const opt = document.createElement('option');
+  opt.value = p.sku;
+  opt.label = p.desc + (p.volt ? ' (' + p.volt + ')' : '');
+  frag.appendChild(opt);
+});
+skuList.appendChild(frag);
+
+/* ===================== ESTADO ===================== */
+let registros = [];
+let seq = 1;
+
+/* ===================== RELÓGIO AO VIVO ===================== */
+function pad(n){ return String(n).padStart(2,'0'); }
+function fmtDateTime(d){
+  return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear()+' '+pad(d.getHours())+':'+pad(d.getMinutes());
+}
+function tickClock(){
+  document.getElementById('liveClock').textContent = fmtDateTime(new Date());
+}
+tickClock();
+setInterval(tickClock, 1000 * 15);
+
+/* ===================== SKU -> DESCRIÇÃO/VOLTAGEM ===================== */
+const skuInput = document.getElementById('skuInput');
+const prodPreview = document.getElementById('prodPreview');
+function updateProdPreview(){
+  const p = skuMap[skuInput.value.trim().toUpperCase()] || skuMap[skuInput.value.trim()];
+  if(p){
+    prodPreview.classList.remove('empty');
+    prodPreview.innerHTML = '<strong>'+p.desc+'</strong>' + (p.volt ? ' &middot; Voltagem: '+p.volt : ' &middot; Voltagem: —');
+  } else {
+    prodPreview.classList.add('empty');
+    prodPreview.textContent = skuInput.value.trim() ? 'SKU não encontrado na base de produtos' : 'Selecione um SKU válido da lista';
+  }
+}
+skuInput.addEventListener('input', updateProdPreview);
+skuInput.addEventListener('change', updateProdPreview);
+
+/* ===================== CONSUMIDOR NÃO IDENTIFICADO ===================== */
+const anonCheck = document.getElementById('anonCheck');
+const destNome = document.getElementById('destNome');
+const destDoc = document.getElementById('destDoc');
+function toggleAnon(){
+  const on = anonCheck.checked;
+  destNome.disabled = on; destDoc.disabled = on;
+  if(on){
+    [cepInput, ufInput, cidadeInput, bairroInput, logradouroInput, numeroInput].forEach(el => el.disabled = true);
+    destNome.value = MNL.nome;
+    destDoc.value = MNL.doc;
+    cepInput.value = MNL.cep;
+    ufInput.value = MNL.uf;
+    cidadeInput.value = MNL.cidade;
+    bairroInput.value = MNL.bairro;
+    logradouroInput.value = MNL.logradouro;
+    numeroInput.value = MNL.numero;
+    cepStatus.textContent = 'Preenchido automaticamente com os dados da MNL (consumidor não identificado — NF-e emitida contra a matriz).';
+    cepStatus.className = 'cep-status ok';
+  } else {
+    destNome.value = ''; destDoc.value = '';
+    cepInput.disabled = false; ufInput.disabled = false; numeroInput.disabled = false;
+    cidadeInput.disabled = true; bairroInput.disabled = true; logradouroInput.disabled = true;
+    cepInput.value = ''; ufInput.value = ''; cidadeInput.value = ''; bairroInput.value = ''; logradouroInput.value = ''; numeroInput.value = '';
+    cepStatus.textContent = ''; cepStatus.className = 'cep-status';
+  }
+}
+anonCheck.addEventListener('change', toggleAnon);
+
+/* ===================== BUSCA DE CEP (ViaCEP) ===================== */
+const cepInput = document.getElementById('cepInput');
+const ufInput = document.getElementById('ufInput');
+const cidadeInput = document.getElementById('cidadeInput');
+const bairroInput = document.getElementById('bairroInput');
+const logradouroInput = document.getElementById('logradouroInput');
+const numeroInput = document.getElementById('numeroInput');
+const cepStatus = document.getElementById('cepStatus');
+
+cepInput.addEventListener('input', () => {
+  let v = cepInput.value.replace(/\D/g,'').slice(0,8);
+  if(v.length > 5) v = v.slice(0,5)+'-'+v.slice(5);
+  cepInput.value = v;
+});
+
+async function buscarCep(){
+  const raw = cepInput.value.replace(/\D/g,'');
+  if(raw.length !== 8){
+    cepStatus.textContent = '';
+    cepStatus.className = 'cep-status';
+    return;
+  }
+  cepStatus.textContent = 'Buscando endereço...';
+  cepStatus.className = 'cep-status loading';
+  try{
+    const resp = await fetch('https://viacep.com.br/ws/'+raw+'/json/');
+    const data = await resp.json();
+    if(data.erro){
+      cepStatus.textContent = 'CEP não encontrado — preencha o endereço manualmente.';
+      cepStatus.className = 'cep-status error';
+      [ufInput, cidadeInput, bairroInput, logradouroInput].forEach(el => el.disabled = false);
+      return;
+    }
+    ufInput.value = data.uf || '';
+    cidadeInput.value = data.localidade || '';
+    bairroInput.value = data.bairro || '';
+    logradouroInput.value = data.logradouro || '';
+    [ufInput, cidadeInput, bairroInput, logradouroInput].forEach(el => el.disabled = true);
+    cepStatus.textContent = 'Endereço encontrado automaticamente.';
+    cepStatus.className = 'cep-status ok';
+    document.getElementById('numeroInput').focus();
+  }catch(err){
+    cepStatus.textContent = 'Sem conexão para buscar o CEP — preencha o endereço manualmente.';
+    cepStatus.className = 'cep-status error';
+    [ufInput, cidadeInput, bairroInput, logradouroInput].forEach(el => el.disabled = false);
+  }
+}
+cepInput.addEventListener('blur', buscarCep);
+cepInput.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); buscarCep(); } });
+
+/* ===================== SUBMIT ===================== */
+const form = document.getElementById('regForm');
+const formError = document.getElementById('formError');
+
+form.addEventListener('submit', e => {
+  e.preventDefault();
+  formError.classList.remove('show');
+
+  const skuVal = skuInput.value.trim();
+  const prod = skuMap[skuVal];
+  const qtd = parseInt(document.getElementById('qtdInput').value, 10);
+  const tipo = document.getElementById('tipoInput').value;
+
+  if(!prod){
+    formError.textContent = 'Selecione um SKU válido da lista de produtos.';
+    formError.classList.add('show');
+    skuInput.focus();
+    return;
+  }
+  if(!qtd || qtd <= 0){
+    formError.textContent = 'Informe uma quantidade válida.';
+    formError.classList.add('show');
+    document.getElementById('qtdInput').focus();
+    return;
+  }
+  if(!tipo){
+    formError.textContent = 'Selecione o tipo de operação.';
+    formError.classList.add('show');
+    document.getElementById('tipoInput').focus();
+    return;
+  }
+  const nfe = document.getElementById('nfeInput').value;
+  if(!nfe){
+    formError.textContent = 'Informe se a NF-e já foi emitida.';
+    formError.classList.add('show');
+    document.getElementById('nfeInput').focus();
+    return;
+  }
+
+  const anon = anonCheck.checked;
+  const nome = destNome.value.trim();
+  const doc = destDoc.value.trim();
+  const pendente = (!anon && (!nome || !doc));
+
+  const registro = {
+    id: seq++,
+    dataHora: new Date(),
+    sku: prod.sku,
+    desc: prod.desc,
+    volt: prod.volt,
+    qtd,
+    anon,
+    nome: anon ? '' : nome,
+    doc: anon ? '' : doc,
+    cep: cepInput.value.trim(),
+    uf: ufInput.value.trim(),
+    cidade: cidadeInput.value.trim(),
+    bairro: bairroInput.value.trim(),
+    logradouro: logradouroInput.value.trim(),
+    numero: document.getElementById('numeroInput').value.trim(),
+    tipo,
+    obs: document.getElementById('obsInput').value.trim(),
+    nfe,
+    pendente
+  };
+
+  registros.unshift(registro);
+  renderList();
+  form.reset();
+  toggleAnon();
+  updateProdPreview();
+  skuInput.focus();
+});
+
+/* ===================== RENDER LISTA ===================== */
+const listContainer = document.getElementById('listContainer');
+const listCount = document.getElementById('listCount');
+const statTotal = document.getElementById('statTotal');
+const statQtd = document.getElementById('statQtd');
+const statPend = document.getElementById('statPend');
+
+function escapeHtml(s){
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderList(){
+  listCount.textContent = registros.length;
+  statTotal.textContent = registros.length;
+  statQtd.textContent = registros.reduce((s,r) => s + r.qtd, 0);
+  statPend.textContent = registros.filter(r => r.pendente).length;
+
+  if(registros.length === 0){
+    listContainer.innerHTML = '<div class="empty-state"><div class="big">🗒️</div>' +
+      '<p><strong>Nenhum registro ainda.</strong></p>' +
+      '<p>Preencha o formulário ao lado para lançar a primeira retirada do evento.</p></div>';
+    return;
+  }
+
+  listContainer.innerHTML = registros.map(r => {
+    const endereco = [r.logradouro, r.numero].filter(Boolean).join(', ') +
+      (r.bairro ? ' — ' + r.bairro : '') + (r.cidade ? ', ' + r.cidade : '') + (r.uf ? '/' + r.uf : '');
+    return `
+    <div class="ticket ${r.pendente ? 'pend' : ''}">
+      <button class="t-del" data-id="${r.id}" title="Remover registro">✕</button>
+      <div class="t-top">
+        <div>
+          <div class="t-id">#${String(r.id).padStart(4,'0')}</div>
+          <div class="t-time">${fmtDateTime(r.dataHora)}</div>
+        </div>
+        <span class="pill ${r.pendente ? 'pend' : 'ok'}">${r.pendente ? '⚠ Pendência' : '✔ OK'}</span>
+      </div>
+      <div class="t-grid">
+        <div><div class="k">Produto</div><div class="v">${escapeHtml(r.desc)}</div></div>
+        <div><div class="k">SKU</div><div class="v">${escapeHtml(r.sku)}</div></div>
+        <div><div class="k">Voltagem</div><div class="v">${escapeHtml(r.volt || '—')}</div></div>
+        <div><div class="k">Quantidade</div><div class="v">${r.qtd}</div></div>
+        <div><div class="k">Destinatário</div><div class="v">${r.anon ? 'Não identificado' : escapeHtml(r.nome || '—')}</div></div>
+        <div><div class="k">CPF/CNPJ</div><div class="v">${r.anon ? '—' : escapeHtml(r.doc || '—')}</div></div>
+        <div><div class="k">Endereço</div><div class="v">${escapeHtml(endereco) || '—'}</div></div>
+        <div><div class="k">CEP</div><div class="v">${escapeHtml(r.cep) || '—'}</div></div>
+        <div><div class="k">Tipo de Operação</div><div class="v">${escapeHtml(r.tipo)}</div></div>
+        <div><div class="k">NF-e emitida?</div><div class="v">${escapeHtml(r.nfe)}</div></div>
+      </div>
+      ${r.obs ? `<div class="t-obs">${escapeHtml(r.obs)}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  listContainer.querySelectorAll('.t-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = parseInt(btn.dataset.id, 10);
+      if(confirm('Remover este registro? Essa ação não pode ser desfeita.')){
+        registros = registros.filter(r => r.id !== id);
+        renderList();
+      }
+    });
+  });
+}
+
+/* ===================== EXPORTAR CSV ===================== */
+document.getElementById('exportBtn').addEventListener('click', () => {
+  if(registros.length === 0){ alert('Não há registros para exportar.'); return; }
+  const headers = ['Nº','Data/Hora','SKU','Descrição','Voltagem','Quantidade','Destinatário','Consumidor não identificado',
+    'CPF/CNPJ','CEP','UF','Cidade','Bairro','Logradouro','Número','Tipo de Operação','NF-e emitida','Observações','Status'];
+  const rows = registros.slice().reverse().map(r => [
+    r.id, fmtDateTime(r.dataHora), r.sku, r.desc, r.volt, r.qtd,
+    r.anon ? '' : r.nome, r.anon ? 'SIM' : 'NÃO', r.anon ? '' : r.doc,
+    r.cep, r.uf, r.cidade, r.bairro, r.logradouro, r.numero, r.tipo, r.nfe, r.obs,
+    r.pendente ? 'PENDÊNCIA' : 'OK'
+  ]);
+  const csv = [headers, ...rows].map(row =>
+    row.map(v => '"' + String(v ?? '').replace(/"/g,'""') + '"').join(';')
+  ).join('\r\n');
+  const blob = new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const now = new Date();
+  a.href = url;
+  a.download = 'registros_movimentacao_' + now.toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* estado inicial */
+toggleAnon();
+renderList();
+</script>
+</body>
+</html>
